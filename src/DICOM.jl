@@ -28,7 +28,7 @@ end
 type DcmElt
     tag::(Tuple{UInt16,UInt16})
     data::Array{Any,1}
-    vr::ASCIIString    # "" except for non-standard VR
+    vr::String    # "" except for non-standard VR
     DcmElt(tag, data) = new(tag,data,"")
 end
 
@@ -259,7 +259,7 @@ function element(st, evr, dcm)
     elt = read(st, UInt16)
     gelt = (grp,elt)
     if evr && !always_implicit(grp,elt)
-        vr = ASCIIString(read(st, UInt8, 2))
+        vr = String(read(st, UInt8, 2))
         if vr in ("OB", "OW", "OF", "SQ", "UT", "UN")
             skip(st, 2)
         else
@@ -283,7 +283,7 @@ function element(st, evr, dcm)
     sz = read(st,lentype)
 
     data =
-    vr=="ST" || vr=="LT" || vr=="UT" ? bytestring(read(st, UInt8, sz)) :
+    vr=="ST" || vr=="LT" || vr=="UT" ? String(copy(read(st, UInt8, sz))) :
 
     sz==0 || vr=="XX" ? Any[] :
 
@@ -306,7 +306,7 @@ function element(st, evr, dcm)
 
     vr == "AT" ? [ read(st,UInt16,2) for n=1:div(sz,4) ] :
 
-    vr == "AS" ? ASCIIString(read(st,UInt8,4)) :
+    vr == "AS" ? String(read(st,UInt8,4)) :
 
     vr == "DS" ? map(x->parse(Float64,x), string_parse(st, sz, 16, false)) :
     vr == "IS" ? map(x->parse(Int,x), string_parse(st, sz, 12, false)) :
@@ -379,7 +379,7 @@ end
 function dcm_parse(st)
     evr = false
     skip(st, 128)
-    sig = ASCIIString(read(st,UInt8,4))
+    sig = String(read(st,UInt8,4))
     if sig != "DICM"
         error("dicom: invalid file header")
         # seek(st, 0)
@@ -387,7 +387,7 @@ function dcm_parse(st)
     # a bit of a hack to detect explicit VR. seek past the first tag,
     # and check to see if a valid VR name is there
     skip(st, 4)
-    sig = ASCIIString(read(st,UInt8,2))
+    sig = String(read(st,UInt8,2))
     evr = sig in VR_names
     skip(st, -6)
     data = Any[]
